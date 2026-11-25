@@ -1,0 +1,26 @@
+app = "omnitune-server"
+primary_region = "ams"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8787"
+  DATABASE_PATH = "/data/omnitune.db"
+  NODE_ENV = "production"
+
+[[mounts]]
+  source = "omnitune_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "3s"
+    path = "/health"

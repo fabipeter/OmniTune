@@ -1,0 +1,80 @@
+{
+  "name": "@omnitune/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OmniTune desktop (macOS + Windows) — Electron shell around the web app",
+  "author": "OmniTune",
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "node dev.mjs",
+    "build:web": "cross-env VITE_TARGET=desktop pnpm --filter @omnitune/web exec vite build --outDir ../desktop/web-dist --emptyOutDir",
+    "start": "pnpm build:web && electron .",
+    "pack": "pnpm build:web && electron-builder --dir",
+    "dist": "pnpm build:web && electron-builder",
+    "dist:mac": "pnpm build:web && electron-builder --mac",
+    "dist:win": "pnpm build:web && electron-builder --win"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7",
+    "cross-env": "^10.1.0",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
+    "wait-on": "^9.5.1"
+  },
+  "homepage": "https://omnitune.app",
+  "build": {
+    "appId": "app.omnitune.desktop",
+    "productName": "OmniTune",
+    "copyright": "Copyright © OmniTune",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "web-dist/**/*",
+      "build/tray*.png",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "mac/entitlements.mac.plist",
+      "entitlementsInherit": "mac/entitlements.mac.plist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": null
+  }
+}

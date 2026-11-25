@@ -1,0 +1,42 @@
+name: Native Mobile CI (iOS & Android)
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/mobile/**"]
+  pull_request:
+    paths: ["apps/mobile/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Swift core unit tests
+        working-directory: apps/mobile/ios
+        run: swift test
+      - name: Build native iOS app for Simulator
+        working-directory: apps/mobile/ios
+        run: |
+          xcodebuild -project OmniTune.xcodeproj -scheme OmniTune \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 9.9.2
+      - name: Run Android unit tests & assemble debug APK
+        working-directory: apps/mobile/android
+        run: ./gradlew testDebugUnitTest assembleDebug

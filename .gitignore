@@ -1,0 +1,27 @@
+node_modules
+dist
+build
+release
+.turbo
+*.log
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+data/
+.DS_Store
+# Desktop packaged output
+apps/desktop/web-dist
+apps/desktop/release
+# iOS Xcode build & user state
+apps/mobile/ios/.build
+apps/mobile/ios/DerivedData
+apps/mobile/ios/*.xcodeproj/xcuserdata
+apps/mobile/ios/*.xcodeproj/project.xcworkspace/xcuserdata
+# Android Gradle build & local SDK config
+apps/mobile/android/.gradle
+apps/mobile/android/build
+apps/mobile/android/app/build
+apps/mobile/android/local.properties
+apps/mobile/android/.idea

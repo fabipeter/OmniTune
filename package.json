@@ -1,0 +1,38 @@
+{
+  "name": "omnitune",
+  "private": true,
+  "version": "0.1.0",
+  "description": "OmniTune — unified music, mixes, radio and podcasts. Web, desktop (macOS/Windows) and native mobile (iOS SwiftUI / Android Kotlin Compose).",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @omnitune/web dev",
+    "dev:server": "pnpm --filter @omnitune/server dev",
+    "dev:desktop": "pnpm --filter @omnitune/desktop dev",
+    "dev:ios": "open apps/mobile/ios/OmniTune.xcodeproj",
+    "dev:android": "cd apps/mobile/android && ./gradlew installDebug",
+    "build:web": "pnpm --filter @omnitune/web build",
+    "build:server": "pnpm --filter @omnitune/server build",
+    "build:desktop": "pnpm --filter @omnitune/desktop dist",
+    "build:desktop:mac": "pnpm --filter @omnitune/desktop dist:mac",
+    "build:desktop:win": "pnpm --filter @omnitune/desktop dist:win",
+    "test": "pnpm -r --if-present test",
+    "test:ios": "cd apps/mobile/ios && swift test",
+    "test:android": "cd apps/mobile/android && ./gradlew testDebugUnitTest",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "electron-winstaller",
+      "esbuild"
+    ],
+    "overrides": {
+      "react": "19.3.0",
+      "react-dom": "19.3.0",
+      "glob": ">=14.0.2",
+      "minimatch": ">=11.0.1"
+    }
+  }
+}

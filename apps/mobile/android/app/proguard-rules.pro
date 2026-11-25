@@ -1,0 +1,3 @@
+-keepattributes *Annotation*, InnerClasses
+-keep class app.omnitune.android.core.** { *; }
+-dontwarn kotlinx.serialization.**
