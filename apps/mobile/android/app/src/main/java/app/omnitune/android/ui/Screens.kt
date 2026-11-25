@@ -1,5 +1,6 @@
 package app.omnitune.android.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,23 +16,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
@@ -42,16 +48,18 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -71,7 +79,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -97,7 +104,7 @@ import app.omnitune.android.core.timeGreeting
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** OmniTune track row: rounded art, inline heart, swipe-to-queue and long-press menu. */
+/** OmniTune track row: rounded art, active cobalt highlight, inline heart, swipe-to-queue & long-press menu. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TrackRow(
@@ -122,7 +129,7 @@ fun TrackRow(
                 app.player.addToQueue(track)
                 showToast("Added to Queue")
             }
-            false // bounce back after queueing
+            false
         },
     )
 
@@ -150,12 +157,12 @@ fun TrackRow(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             if (showArtwork) {
-                ArtworkImage(track.artworkUrl, size = 54.dp, pixelSize = 120, cornerRadius = 8.dp)
+                ArtworkImage(track.artworkUrl, size = 50.dp, pixelSize = 120, cornerRadius = 6.dp)
             } else {
                 Text(
                     text = "${track.trackNumber ?: ""}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isCurrent) OmniTuneAccentSoft else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.width(26.dp),
                 )
             }
@@ -164,7 +171,7 @@ fun TrackRow(
                 Text(
                     track.title,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium),
-                    color = if (isCurrent) OmniTuneAccent else MaterialTheme.colorScheme.onBackground,
+                    color = if (isCurrent) OmniTuneAccentSoft else MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -195,28 +202,39 @@ fun TrackRow(
     }
 }
 
+/** OmniTune collection action bar: Smart Shuffle pill + circular Cobalt Play FAB. */
 @Composable
 private fun PlayShuffleBar(onPlay: () -> Unit, onShuffle: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Button(
-            onClick = onPlay,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = OmniTuneAccent),
-            shape = RoundedCornerShape(11.dp),
-            modifier = Modifier.weight(1f).height(46.dp),
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            border = BorderStroke(1.dp, OmniTuneAccent.copy(alpha = 0.30f)),
+            modifier = Modifier.clip(CircleShape).clickable(onClick = onShuffle),
         ) {
-            Icon(Icons.Rounded.PlayArrow, null)
-            Spacer(Modifier.width(6.dp))
-            Text("Play", fontWeight = FontWeight.Bold)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+            ) {
+                Icon(Icons.Rounded.Shuffle, null, tint = OmniTuneAccentSoft, modifier = Modifier.size(18.dp))
+                Text("Smart Shuffle", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+            }
         }
-        Button(
-            onClick = onShuffle,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = OmniTuneAccent),
-            shape = RoundedCornerShape(11.dp),
-            modifier = Modifier.weight(1f).height(46.dp),
+
+        Surface(
+            shape = CircleShape,
+            color = OmniTuneAccent,
+            shadowElevation = 8.dp,
+            modifier = Modifier.size(52.dp).clip(CircleShape).clickable(onClick = onPlay),
         ) {
-            Icon(Icons.Rounded.Shuffle, null)
-            Spacer(Modifier.width(6.dp))
-            Text("Smart Shuffle", fontWeight = FontWeight.Bold)
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(30.dp))
+            }
         }
     }
 }
@@ -226,14 +244,16 @@ private fun ShelfCarousel(app: OmniTuneApplication, nav: NavController, shelf: H
     val trackPool = remember(shelf) { shelf.items.filterIsInstance<ShelfItem.TrackItem>().map { it.track } }
     Column(modifier = Modifier.padding(vertical = 10.dp)) {
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(shelf.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
-            shelf.subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Text(shelf.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
+            shelf.subtitle?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         Spacer(Modifier.height(10.dp))
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             items(shelf.items, key = { it.key }) { item ->
                 Column(
-                    modifier = Modifier.width(150.dp).clickable {
+                    modifier = Modifier.width(148.dp).clickable {
                         when (item) {
                             is ShelfItem.TrackItem -> {
                                 val list = trackPool.ifEmpty { listOf(item.track) }
@@ -252,12 +272,12 @@ private fun ShelfCarousel(app: OmniTuneApplication, nav: NavController, shelf: H
                     },
                 ) {
                     when (item) {
-                        is ShelfItem.TrackItem -> ArtworkImage(item.track.artworkUrl, 150.dp)
-                        is ShelfItem.AlbumItem -> ArtworkImage(item.album.artworkUrl, 150.dp)
-                        is ShelfItem.ArtistItem -> ArtistAvatar(item.artist.id, item.artist.artworkUrl, app.catalog, 140.dp)
-                        is ShelfItem.PodcastItem -> ArtworkImage(item.podcast.artworkUrl, 150.dp)
-                        is ShelfItem.MixItem -> MosaicArtwork(item.mix.artwork, 150.dp)
-                        is ShelfItem.PlaylistItem -> MosaicArtwork(item.playlist.tracks.map { it.artworkUrl }, 150.dp)
+                        is ShelfItem.TrackItem -> ArtworkImage(item.track.artworkUrl, 148.dp)
+                        is ShelfItem.AlbumItem -> ArtworkImage(item.album.artworkUrl, 148.dp)
+                        is ShelfItem.ArtistItem -> ArtistAvatar(item.artist.id, item.artist.artworkUrl, app.catalog, 138.dp)
+                        is ShelfItem.PodcastItem -> ArtworkImage(item.podcast.artworkUrl, 148.dp)
+                        is ShelfItem.MixItem -> MosaicArtwork(item.mix.artwork, 148.dp)
+                        is ShelfItem.PlaylistItem -> MosaicArtwork(item.playlist.tracks.map { it.artworkUrl }, 148.dp)
                     }
                     Spacer(Modifier.height(6.dp))
                     val (t, sub) = when (item) {
@@ -268,7 +288,7 @@ private fun ShelfCarousel(app: OmniTuneApplication, nav: NavController, shelf: H
                         is ShelfItem.MixItem -> item.mix.name to item.mix.description
                         is ShelfItem.PlaylistItem -> item.playlist.name to "${item.playlist.tracks.size} songs"
                     }
-                    Text(t, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(t, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -276,14 +296,61 @@ private fun ShelfCarousel(app: OmniTuneApplication, nav: NavController, shelf: H
     }
 }
 
+@Composable
+private fun HeaderIconCircle(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit,
+) {
+    Surface(
+        shape = CircleShape,
+        color = containerColor,
+        modifier = Modifier.size(36.dp).clip(CircleShape).clickable(onClick = onClick),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(19.dp))
+        }
+    }
+}
+
+@Composable
+private fun QuickPickTile(
+    title: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    artwork: @Composable () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(0.8.dp, OmniTuneAccent.copy(alpha = 0.14f)),
+        modifier = modifier.height(54.dp).clip(RoundedCornerShape(6.dp)).clickable(onClick = onClick),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            artwork()
+            Text(
+                title,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 10.dp),
+            )
+        }
+    }
+}
+
 // ==================== HOME ====================
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(app: OmniTuneApplication, nav: NavController, showToast: (String) -> Unit, onTrackMenu: (Track, String?) -> Unit) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val libState by app.library.state.collectAsState()
     var filter by remember { mutableStateOf("All") }
     var shelves by remember { mutableStateOf<List<HomeShelf>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+
+    val playlists = remember(libState) { app.library.playlists().take(3) }
+    val recentTracks = remember(libState) { app.library.recentlyPlayed(4) }
 
     LaunchedEffect(Unit) {
         loading = true
@@ -293,26 +360,38 @@ fun HomeScreen(app: OmniTuneApplication, nav: NavController, showToast: (String)
         loading = false
     }
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            LargeTopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OmniTuneLogoMark(30.dp)
-                        Text(timeGreeting(), fontWeight = FontWeight.ExtraBold)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { nav.navigate("settings") }) {
-                        Icon(Icons.Rounded.Person, contentDescription = "Settings")
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
-        },
-    ) { pad ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(bottom = 24.dp)) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(250.dp)
+                .background(Brush.verticalGradient(listOf(OmniTuneAccent.copy(alpha = 0.24f), Color.Transparent))),
+        )
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+            contentPadding = PaddingValues(bottom = 28.dp),
+        ) {
+            // Compact OmniTune Header
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    OmniTuneLogoMark(34.dp)
+                    Text(
+                        timeGreeting(),
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    HeaderIconCircle(Icons.Rounded.History, "Recently Played") { nav.navigate("recent") }
+                    HeaderIconCircle(Icons.Rounded.Settings, "Settings") { nav.navigate("settings") }
+                }
+            }
+
+            // Category Filter Chips
             item {
                 Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("All", "Music", "Podcasts").forEach { f ->
@@ -320,39 +399,75 @@ fun HomeScreen(app: OmniTuneApplication, nav: NavController, showToast: (String)
                     }
                 }
             }
+
+            // 2-column OmniTune Quick-Pick Grid
             if (filter != "Podcasts") {
                 item {
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.weight(1f).height(54.dp).clip(RoundedCornerShape(8.dp)).clickable { nav.navigate("liked") },
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier.size(54.dp).background(Brush.linearGradient(listOf(OmniTuneAccent, Color(0xFF38BDF8)))),
-                                    contentAlignment = Alignment.Center,
-                                ) { Icon(Icons.Rounded.Favorite, null, tint = Color.White) }
-                                Text("Liked Songs", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp), maxLines = 1)
-                            }
+                    val quickItems = buildList<Triple<String, () -> Unit, @Composable () -> Unit>> {
+                        add(
+                            Triple(
+                                "Liked Songs",
+                                { nav.navigate("liked") },
+                                {
+                                    Box(modifier = Modifier.size(54.dp).background(OmniTuneSonicGradient), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Rounded.Favorite, null, tint = Color.White)
+                                    }
+                                },
+                            ),
+                        )
+                        add(
+                            Triple(
+                                "Recently Played",
+                                { nav.navigate("recent") },
+                                {
+                                    Box(modifier = Modifier.size(54.dp).background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Rounded.GraphicEq, null, tint = OmniTuneAccentSoft)
+                                    }
+                                },
+                            ),
+                        )
+                        playlists.forEach { pl ->
+                            add(
+                                Triple(
+                                    pl.name,
+                                    { nav.navigate("playlist/${pl.id}") },
+                                    { MosaicArtwork(pl.tracks.map { it.artworkUrl }, size = 54.dp, cornerRadius = 0.dp) },
+                                ),
+                            )
                         }
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.weight(1f).height(54.dp).clip(RoundedCornerShape(8.dp)).clickable { nav.navigate("recent") },
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(54.dp).background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Rounded.History, null, tint = OmniTuneAccent)
+                        recentTracks.take((4 - playlists.size).coerceAtLeast(0)).forEach { track ->
+                            add(
+                                Triple(
+                                    track.title,
+                                    { app.player.playTrack(track) },
+                                    { ArtworkImage(track.artworkUrl, size = 54.dp, pixelSize = 120, cornerRadius = 0.dp) },
+                                ),
+                            )
+                        }
+                    }
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                    ) {
+                        quickItems.chunked(2).forEach { pair ->
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                pair.forEach { (title, onClick, art) ->
+                                    QuickPickTile(title = title, modifier = Modifier.weight(1f), onClick = onClick, artwork = art)
                                 }
-                                Text("Recent", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp), maxLines = 1)
+                                if (pair.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }
                     }
                 }
             }
+
             if (loading && shelves.isEmpty()) {
-                item { Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = OmniTuneAccent) } }
+                item {
+                    Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = OmniTuneAccent)
+                    }
+                }
             } else {
                 val filtered = shelves.filter { if (filter == "All") true else if (filter == "Podcasts") it.id == "podcasts" else it.id != "podcasts" }
                 items(filtered, key = { it.id }) { shelf -> ShelfCarousel(app, nav, shelf) }
@@ -361,112 +476,23 @@ fun HomeScreen(app: OmniTuneApplication, nav: NavController, showToast: (String)
     }
 }
 
-// ==================== NEW ====================
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun NewScreen(app: OmniTuneApplication, nav: NavController, showToast: (String) -> Unit) {
-    var topSongs by remember { mutableStateOf<List<Track>>(emptyList()) }
-    var releases by remember { mutableStateOf<List<Album>>(emptyList()) }
-    var albums by remember { mutableStateOf<List<Album>>(emptyList()) }
-    var podcasts by remember { mutableStateOf<List<Podcast>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        topSongs = runCatching { app.catalog.getTopSongs(20) }.getOrDefault(emptyList())
-        releases = runCatching { app.catalog.getNewReleases(16) }.getOrDefault(emptyList())
-        albums = runCatching { app.catalog.getTopAlbums(16) }.getOrDefault(emptyList())
-        podcasts = runCatching { app.catalog.getTopPodcasts(12) }.getOrDefault(emptyList())
-        loading = false
-    }
-
-    Scaffold(topBar = { LargeTopAppBar(title = { Text("New", fontWeight = FontWeight.ExtraBold) }) }) { pad ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(bottom = 24.dp)) {
-            if (loading && topSongs.isEmpty()) {
-                item { Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = OmniTuneAccent) } }
-            } else {
-                if (topSongs.isNotEmpty()) item { ShelfCarousel(app, nav, HomeShelf("n-top", "Top Charts", items = topSongs.map { ShelfItem.TrackItem(it) })) }
-                if (releases.isNotEmpty()) item { ShelfCarousel(app, nav, HomeShelf("n-rel", "New Releases", items = releases.map { ShelfItem.AlbumItem(it) })) }
-                if (albums.isNotEmpty()) item { ShelfCarousel(app, nav, HomeShelf("n-alb", "Popular Albums", items = albums.map { ShelfItem.AlbumItem(it) })) }
-                if (podcasts.isNotEmpty()) item { ShelfCarousel(app, nav, HomeShelf("n-pod", "Top Podcasts", items = podcasts.map { ShelfItem.PodcastItem(it) })) }
-                item {
-                    Text("Browse Genres", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), modifier = Modifier.padding(16.dp))
-                }
-                items(OMNITUNE_GENRES.chunked(2)) { pair ->
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        pair.forEach { g ->
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(78.dp)
-                                    .clip(RoundedCornerShape(11.dp))
-                                    .background(Color(g.colorHex))
-                                    .clickable { nav.navigate("genre/${g.id}") }
-                                    .padding(12.dp),
-                                contentAlignment = Alignment.BottomStart,
-                            ) { Text(g.name, color = Color.White, fontWeight = FontWeight.Bold) }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ==================== RADIO ====================
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RadioScreen(app: OmniTuneApplication, nav: NavController, showToast: (String) -> Unit) {
-    val scope = rememberCoroutineScope()
-    var mixes by remember { mutableStateOf<List<Mix>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        mixes = RadioEngine.buildMixes(app.catalog, app.library.taste(), app.library.recentlyPlayed(25), app.library.settings().explicitFilter)
-        mixes.forEach { app.mixesById[it.id] = it }
-    }
-
-    Scaffold(topBar = { LargeTopAppBar(title = { Text("Radio", fontWeight = FontWeight.ExtraBold) }) }) { pad ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(bottom = 24.dp)) {
-            if (mixes.isNotEmpty()) {
-                item { ShelfCarousel(app, nav, HomeShelf("r-mix", "Made for You", "Endless mixes shaped by your plays, likes and skips", mixes.map { ShelfItem.MixItem(it) })) }
-            }
-            item { Text("Start a Station", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), modifier = Modifier.padding(16.dp)) }
-            items(OMNITUNE_GENRES.take(8).chunked(2)) { pair ->
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    pair.forEach { g ->
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(92.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(g.colorHex))
-                                .clickable {
-                                    showToast("Tuning ${g.name} Radio…")
-                                    scope.launch {
-                                        val songs = runCatching { app.catalog.getGenreTracks(g, 35) }.getOrDefault(emptyList())
-                                        if (songs.isNotEmpty()) app.player.play(songs, context = PlaybackContext("radio", name = "${g.name} Radio"), shuffle = true)
-                                    }
-                                }
-                                .padding(12.dp),
-                        ) {
-                            Column(verticalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxSize()) {
-                                Icon(Icons.Rounded.Radio, null, tint = Color.White.copy(alpha = 0.85f))
-                                Text("${g.name} Radio", color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // ==================== SEARCH ====================
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(app: OmniTuneApplication, nav: NavController, showToast: (String) -> Unit, onTrackMenu: (Track, String?) -> Unit) {
+    val libState by app.library.state.collectAsState()
     var query by remember { mutableStateOf("") }
     var scopeTab by remember { mutableStateOf("All") }
     var results by remember { mutableStateOf<SearchResults?>(null) }
+    var releases by remember { mutableStateOf<List<Album>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
+
+    val recentSearches = remember(libState) { app.library.recentSearches() }
+
+    LaunchedEffect(Unit) {
+        if (releases.isEmpty()) {
+            releases = runCatching { app.catalog.getNewReleases(12) }.getOrDefault(emptyList())
+        }
+    }
 
     LaunchedEffect(query) {
         val q = query.trim()
@@ -481,162 +507,387 @@ fun SearchScreen(app: OmniTuneApplication, nav: NavController, showToast: (Strin
         loading = false
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Search", fontWeight = FontWeight.ExtraBold) }) }) { pad ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(bottom = 24.dp)) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding(),
+        contentPadding = PaddingValues(bottom = 28.dp),
+    ) {
+        item {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                OmniTuneLogoMark(30.dp)
+                Text("Search", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
+            }
+        }
+        item {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("What do you want to play?") },
+                leadingIcon = { Icon(Icons.Rounded.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Rounded.Close, contentDescription = "Clear")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = CircleShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedBorderColor = OmniTuneAccent,
+                    unfocusedBorderColor = OmniTuneAccent.copy(alpha = 0.25f),
+                ),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        if (query.isBlank()) {
+            if (recentSearches.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text("Recent Searches", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                        TextButton(onClick = { app.library.clearRecentSearches() }) {
+                            Text("Clear", color = OmniTuneAccentSoft)
+                        }
+                    }
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(recentSearches) { term ->
+                            FilterChipPill(term, selected = false) { query = term }
+                        }
+                    }
+                }
+            }
+            if (releases.isNotEmpty()) {
+                item {
+                    ShelfCarousel(app, nav, HomeShelf("s-new", "New & Trending Releases", items = releases.map { ShelfItem.AlbumItem(it) }))
+                }
+            }
             item {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = { Text("Artists, Songs, Podcasts…") },
-                    leadingIcon = { Icon(Icons.Rounded.Search, null) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                Text(
+                    "Browse All",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 )
             }
-            if (query.isBlank()) {
-                item { Text("Browse Categories", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), modifier = Modifier.padding(16.dp)) }
-                items(OMNITUNE_GENRES.chunked(2)) { pair ->
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        pair.forEach { g ->
-                            Box(
-                                modifier = Modifier.weight(1f).height(76.dp).clip(RoundedCornerShape(11.dp)).background(Color(g.colorHex)).clickable { nav.navigate("genre/${g.id}") }.padding(12.dp),
-                                contentAlignment = Alignment.BottomStart,
-                            ) { Text(g.name, color = Color.White, fontWeight = FontWeight.Bold) }
+            items(OMNITUNE_GENRES.chunked(2)) { pair ->
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    pair.forEach { g ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(88.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Brush.linearGradient(listOf(Color(g.colorHex), OmniTuneSurface)))
+                                .clickable { nav.navigate("genre/${g.id}") }
+                                .padding(14.dp),
+                            contentAlignment = Alignment.TopStart,
+                        ) {
+                            Text(g.name, color = Color.White, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
                         }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        } else {
+            item {
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(listOf("All", "Songs", "Albums", "Artists", "Podcasts")) { tab ->
+                        FilterChipPill(tab, selected = scopeTab == tab) { scopeTab = tab }
                     }
                 }
-            } else {
-                item {
-                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(listOf("All", "Songs", "Albums", "Artists", "Podcasts")) { tab ->
-                            FilterChipPill(tab, selected = scopeTab == tab) { scopeTab = tab }
-                        }
+            }
+            if (loading) {
+                item { Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = OmniTuneAccent) } }
+            } else results?.let { res ->
+                if ((scopeTab == "All" || scopeTab == "Songs") && res.songs.isNotEmpty()) {
+                    itemsIndexed(res.songs.take(if (scopeTab == "All") 6 else 25)) { idx, t ->
+                        TrackRow(app, t, onPlay = { app.player.play(res.songs, idx, PlaybackContext("search", name = "Search: $query")) }, onMenu = onTrackMenu, showToast = showToast)
                     }
                 }
-                if (loading) {
-                    item { Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = OmniTuneAccent) } }
-                } else results?.let { res ->
-                    if ((scopeTab == "All" || scopeTab == "Songs") && res.songs.isNotEmpty()) {
-                        itemsIndexed(res.songs.take(if (scopeTab == "All") 6 else 25)) { idx, t ->
-                            TrackRow(app, t, onPlay = { app.player.play(res.songs, idx, PlaybackContext("search", name = "Search: $query")) }, onMenu = onTrackMenu, showToast = showToast)
-                        }
-                    }
-                    if ((scopeTab == "All" || scopeTab == "Artists") && res.artists.isNotEmpty()) {
-                        item { ShelfCarousel(app, nav, HomeShelf("sa", "Artists", items = res.artists.map { ShelfItem.ArtistItem(it) })) }
-                    }
-                    if ((scopeTab == "All" || scopeTab == "Albums") && res.albums.isNotEmpty()) {
-                        item { ShelfCarousel(app, nav, HomeShelf("sal", "Albums", items = res.albums.map { ShelfItem.AlbumItem(it) })) }
-                    }
-                    if ((scopeTab == "All" || scopeTab == "Podcasts") && res.podcasts.isNotEmpty()) {
-                        item { ShelfCarousel(app, nav, HomeShelf("sp", "Podcasts", items = res.podcasts.map { ShelfItem.PodcastItem(it) })) }
-                    }
+                if ((scopeTab == "All" || scopeTab == "Artists") && res.artists.isNotEmpty()) {
+                    item { ShelfCarousel(app, nav, HomeShelf("sa", "Artists", items = res.artists.map { ShelfItem.ArtistItem(it) })) }
+                }
+                if ((scopeTab == "All" || scopeTab == "Albums") && res.albums.isNotEmpty()) {
+                    item { ShelfCarousel(app, nav, HomeShelf("sal", "Albums", items = res.albums.map { ShelfItem.AlbumItem(it) })) }
+                }
+                if ((scopeTab == "All" || scopeTab == "Podcasts") && res.podcasts.isNotEmpty()) {
+                    item { ShelfCarousel(app, nav, HomeShelf("sp", "Podcasts", items = res.podcasts.map { ShelfItem.PodcastItem(it) })) }
                 }
             }
         }
     }
 }
 
+// ==================== RADIO ====================
+@Composable
+fun RadioScreen(app: OmniTuneApplication, nav: NavController, showToast: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+    val libState by app.library.state.collectAsState()
+    var mixes by remember { mutableStateOf<List<Mix>>(emptyList()) }
+    var podcasts by remember { mutableStateOf<List<Podcast>>(emptyList()) }
+    val topArtists = remember(libState) { app.library.taste().topArtists(4) }
+
+    LaunchedEffect(Unit) {
+        mixes = RadioEngine.buildMixes(app.catalog, app.library.taste(), app.library.recentlyPlayed(25), app.library.settings().explicitFilter)
+        mixes.forEach { app.mixesById[it.id] = it }
+        podcasts = runCatching { app.catalog.getTopPodcasts(12) }.getOrDefault(emptyList())
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .background(Brush.verticalGradient(listOf(OmniTuneAccent.copy(alpha = 0.22f), Color.Transparent))),
+        )
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+            contentPadding = PaddingValues(bottom = 28.dp),
+        ) {
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    OmniTuneLogoMark(30.dp)
+                    Column {
+                        Text("OmniTune Radio", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
+                        Text("Smart Shuffle stations & personal mixes", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (mixes.isNotEmpty()) {
+                item {
+                    ShelfCarousel(app, nav, HomeShelf("r-mix", "Made for You", "Endless mixes shaped by your plays, likes and skips", mixes.map { ShelfItem.MixItem(it) }))
+                }
+            }
+            item {
+                Text(
+                    "Sonic Stations",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                )
+            }
+            if (topArtists.isNotEmpty()) {
+                items(topArtists.chunked(2)) { pair ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        pair.forEach { artistName ->
+                            val title = artistName.replaceFirstChar { it.uppercase() }
+                            StationTile(
+                                title = title,
+                                subtitle = "Artist Radio",
+                                accent = OmniTuneAccent,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    showToast("Tuning $title Station…")
+                                    scope.launch {
+                                        val songs = runCatching { app.catalog.search(artistName, 35).songs }.getOrDefault(emptyList())
+                                        if (songs.isNotEmpty()) app.player.play(songs, context = PlaybackContext("radio", name = "$title Station"), shuffle = true)
+                                    }
+                                },
+                            )
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+            items(OMNITUNE_GENRES.take(8).chunked(2)) { pair ->
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    pair.forEach { g ->
+                        StationTile(
+                            title = "${g.name} Radio",
+                            subtitle = "Smart Shuffle",
+                            accent = Color(g.colorHex),
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                showToast("Tuning ${g.name} Radio…")
+                                scope.launch {
+                                    val songs = runCatching { app.catalog.getGenreTracks(g, 35) }.getOrDefault(emptyList())
+                                    if (songs.isNotEmpty()) app.player.play(songs, context = PlaybackContext("radio", name = "${g.name} Radio"), shuffle = true)
+                                }
+                            },
+                        )
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+            if (podcasts.isNotEmpty()) {
+                item {
+                    ShelfCarousel(app, nav, HomeShelf("r-pod", "Featured Shows", items = podcasts.map { ShelfItem.PodcastItem(it) }))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StationTile(title: String, subtitle: String, accent: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(
+        modifier = modifier
+            .height(98.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Brush.linearGradient(listOf(accent, OmniTuneSurface)))
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxSize()) {
+            Icon(Icons.Rounded.Radio, null, tint = Color.White.copy(alpha = 0.90f), modifier = Modifier.size(20.dp))
+            Column {
+                Text(title, color = Color.White, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, color = Color.White.copy(alpha = 0.80f), style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
 // ==================== LIBRARY ====================
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(app: OmniTuneApplication, nav: NavController, onCreatePlaylist: () -> Unit) {
     val libState by app.library.state.collectAsState()
     var filter by remember { mutableStateOf("All") }
-    val playlists = remember(libState) { app.library.playlists() }
-    val albums = remember(libState) { app.library.savedAlbums() }
-    val artists = remember(libState) { app.library.followedArtists() }
-    val podcasts = remember(libState) { app.library.followedPodcasts() }
+    var sortAlpha by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            LargeTopAppBar(
-                title = { Text("Library", fontWeight = FontWeight.ExtraBold) },
-                actions = {
-                    IconButton(onClick = onCreatePlaylist) { Icon(Icons.Rounded.Add, contentDescription = "New Playlist") }
-                    IconButton(onClick = { nav.navigate("settings") }) { Icon(Icons.Rounded.Settings, contentDescription = "Settings") }
-                },
-            )
-        },
-    ) { pad ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(bottom = 24.dp)) {
-            item {
-                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("All", "Playlists", "Albums", "Artists", "Podcasts")) { f ->
-                        FilterChipPill(f, selected = filter == f) { filter = f }
+    val playlists = remember(libState, sortAlpha) {
+        val list = app.library.playlists()
+        if (sortAlpha) list.sortedBy { it.name.lowercase() } else list
+    }
+    val albums = remember(libState, sortAlpha) {
+        val list = app.library.savedAlbums()
+        if (sortAlpha) list.sortedBy { it.title.lowercase() } else list
+    }
+    val artists = remember(libState, sortAlpha) {
+        val list = app.library.followedArtists()
+        if (sortAlpha) list.sortedBy { it.name.lowercase() } else list
+    }
+    val podcasts = remember(libState, sortAlpha) {
+        val list = app.library.followedPodcasts()
+        if (sortAlpha) list.sortedBy { it.title.lowercase() } else list
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding(),
+        contentPadding = PaddingValues(bottom = 28.dp),
+    ) {
+        item {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                OmniTuneLogoMark(30.dp)
+                Text("Your Library", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold), modifier = Modifier.weight(1f))
+                HeaderIconCircle(Icons.AutoMirrored.Rounded.Sort, "Sort") { sortAlpha = !sortAlpha }
+                HeaderIconCircle(Icons.Rounded.Add, "New Playlist", containerColor = OmniTuneAccent, tint = Color.White, onClick = onCreatePlaylist)
+                HeaderIconCircle(Icons.Rounded.Settings, "Settings") { nav.navigate("settings") }
+            }
+        }
+        item {
+            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf("All", "Playlists", "Albums", "Artists", "Podcasts")) { f ->
+                    FilterChipPill(f, selected = filter == f) { filter = f }
+                }
+            }
+        }
+        item {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { nav.navigate("liked") }.padding(horizontal = 16.dp, vertical = 9.dp),
+            ) {
+                Box(
+                    modifier = Modifier.size(54.dp).clip(RoundedCornerShape(8.dp)).background(OmniTuneSonicGradient),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Rounded.Favorite, null, tint = Color.White) }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("Liked Songs", fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Rounded.PushPin, null, tint = OmniTuneAccentSoft, modifier = Modifier.size(13.dp))
+                        Text("Playlist · ${app.library.likedTracks().size} songs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
-            item {
+        }
+        item {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { nav.navigate("recent") }.padding(horizontal = 16.dp, vertical = 9.dp),
+            ) {
+                Box(
+                    modifier = Modifier.size(54.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Rounded.History, null, tint = OmniTuneAccentSoft) }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("Recently Played", fontWeight = FontWeight.Bold)
+                    Text("${app.library.recentlyPlayed(50).size} tracks", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        if (filter == "All" || filter == "Playlists") {
+            items(playlists, key = { it.id }) { pl ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().clickable { nav.navigate("liked") }.padding(horizontal = 16.dp, vertical = 10.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { nav.navigate("playlist/${pl.id}") }.padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    Box(
-                        modifier = Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)).background(Brush.linearGradient(listOf(OmniTuneAccent, Color(0xFF38BDF8)))),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.Favorite, null, tint = Color.White) }
+                    MosaicArtwork(pl.tracks.map { it.artworkUrl }, 54.dp)
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("Liked Songs", fontWeight = FontWeight.SemiBold)
-                        Text("${app.library.likedTracks().size} songs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(pl.name, fontWeight = FontWeight.SemiBold)
+                        Text("Playlist · ${pl.tracks.size} songs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
-            if (filter == "All" || filter == "Playlists") {
-                items(playlists, key = { it.id }) { pl ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { nav.navigate("playlist/${pl.id}") }.padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        MosaicArtwork(pl.tracks.map { it.artworkUrl }, 52.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text(pl.name, fontWeight = FontWeight.SemiBold)
-                            Text("Playlist · ${pl.tracks.size} songs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+        }
+        if (filter == "All" || filter == "Albums") {
+            items(albums, key = { "alb-${it.id}" }) { a ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { nav.navigate("album/${a.id}") }.padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    ArtworkImage(a.artworkUrl, 54.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(a.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Album · ${a.artistName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }
             }
-            if (filter == "All" || filter == "Albums") {
-                items(albums, key = { "alb-${it.id}" }) { a ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { nav.navigate("album/${a.id}") }.padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        ArtworkImage(a.artworkUrl, 52.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text(a.title, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                            Text(a.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-            if (filter == "All" || filter == "Artists") {
-                items(artists, key = { "art-${it.id}" }) { a ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { nav.navigate("artist/${a.id}") }.padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        ArtistAvatar(a.id, a.artworkUrl, app.catalog, 48.dp)
-                        Spacer(Modifier.width(12.dp))
+        }
+        if (filter == "All" || filter == "Artists") {
+            items(artists, key = { "art-${it.id}" }) { a ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { nav.navigate("artist/${a.id}") }.padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    ArtistAvatar(a.id, a.artworkUrl, app.catalog, 52.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
                         Text(a.name, fontWeight = FontWeight.SemiBold)
+                        Text("Artist", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
-            if (filter == "All" || filter == "Podcasts") {
-                items(podcasts, key = { "pod-${it.id}" }) { p ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { nav.navigate("podcast/${p.id}") }.padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        ArtworkImage(p.artworkUrl, 52.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text(p.title, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                            Text(p.author, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+        }
+        if (filter == "All" || filter == "Podcasts") {
+            items(podcasts, key = { "pod-${it.id}" }) { p ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { nav.navigate("podcast/${p.id}") }.padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    ArtworkImage(p.artworkUrl, 54.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(p.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Podcast · ${p.author}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }
             }
@@ -647,26 +898,43 @@ fun LibraryScreen(app: OmniTuneApplication, nav: NavController, onCreatePlaylist
 // ==================== DETAIL SCREENS ====================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun detailTopBarColors() = TopAppBarDefaults.topAppBarColors(
+    containerColor = MaterialTheme.colorScheme.background,
+    titleContentColor = MaterialTheme.colorScheme.onBackground,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun AlbumScreen(app: OmniTuneApplication, nav: NavController, albumId: String, showToast: (String) -> Unit, onTrackMenu: (Track, String?) -> Unit) {
     var data by remember { mutableStateOf<Pair<Album, List<Track>>?>(null) }
     val libState by app.library.state.collectAsState()
     LaunchedEffect(albumId) { data = runCatching { app.catalog.getAlbum(albumId) }.getOrNull() }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(data?.first?.title.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text(data?.first?.title.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+            )
+        },
+    ) { pad ->
         val (album, tracks) = data ?: return@Scaffold Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = OmniTuneAccent) }
         val saved = libState.savedAlbums[album.id]?.let { it.deleted != true && it.value != null } == true
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad)) {
             item {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    ArtworkImage(album.artworkUrl, 220.dp, pixelSize = 600, cornerRadius = 12.dp)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Brush.verticalGradient(listOf(OmniTuneAccent.copy(alpha = 0.24f), Color.Transparent)))
+                        .padding(16.dp),
+                ) {
+                    ArtworkImage(album.artworkUrl, 220.dp, pixelSize = 600, cornerRadius = 10.dp)
                     Spacer(Modifier.height(12.dp))
-                    Text(album.title, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
-                    Text(album.artistName, color = OmniTuneAccent, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { album.artistId?.let { nav.navigate("artist/$it") } })
+                    Text(album.title, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
+                    Text(album.artistName, color = OmniTuneAccentSoft, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { album.artistId?.let { nav.navigate("artist/$it") } })
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = { app.library.toggleAlbum(album); showToast(if (saved) "Removed" else "Saved Album") }) { Text(if (saved) "Saved" else "Save Album") }
                     PlayShuffleBar(
@@ -689,23 +957,37 @@ fun ArtistScreen(app: OmniTuneApplication, nav: NavController, artistId: String,
     val libState by app.library.state.collectAsState()
     LaunchedEffect(artistId) { data = runCatching { app.catalog.getArtist(artistId) }.getOrNull() }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(data?.first?.name.orEmpty()) },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text(data?.first?.name.orEmpty()) },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+            )
+        },
+    ) { pad ->
         val (artist, topSongs, albums) = data ?: return@Scaffold Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = OmniTuneAccent) }
         val followed = libState.followedArtists[artist.id]?.let { it.deleted != true && it.value != null } == true
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad)) {
             item {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Brush.verticalGradient(listOf(OmniTuneAccent.copy(alpha = 0.24f), Color.Transparent)))
+                        .padding(16.dp),
+                ) {
                     ArtworkImage(artist.artworkUrl, 160.dp, pixelSize = 500, circle = true)
                     Spacer(Modifier.height(10.dp))
                     Text(artist.name, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold))
                     Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = { app.library.toggleArtist(artist); showToast(if (followed) "Unfollowed" else "Following ${artist.name}") }) {
-                        Text(if (followed) "Following" else "Follow")
+                    Button(
+                        onClick = { app.library.toggleArtist(artist); showToast(if (followed) "Unfollowed" else "Following ${artist.name}") },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (followed) MaterialTheme.colorScheme.surfaceVariant else OmniTuneAccent),
+                        shape = CircleShape,
+                    ) {
+                        Text(if (followed) "Following" else "Follow", color = Color.White)
                     }
                     PlayShuffleBar(
                         onPlay = { app.player.play(topSongs, context = PlaybackContext("artist", artist.id, artist.name), shuffle = false) },
@@ -717,7 +999,7 @@ fun ArtistScreen(app: OmniTuneApplication, nav: NavController, artistId: String,
                 TrackRow(app, t, onPlay = { app.player.play(topSongs, idx, PlaybackContext("artist", artist.id, artist.name)) }, onMenu = onTrackMenu, showToast = showToast)
             }
             if (albums.isNotEmpty()) {
-                item { ShelfCarousel(app, nav, HomeShelf("art-alb", "Albums", items = albums.map { ShelfItem.AlbumItem(it) })) }
+                item { ShelfCarousel(app, nav, HomeShelf("art-alb", "Discography", items = albums.map { ShelfItem.AlbumItem(it) })) }
             }
         }
     }
@@ -728,19 +1010,23 @@ fun ArtistScreen(app: OmniTuneApplication, nav: NavController, artistId: String,
 fun PodcastScreen(app: OmniTuneApplication, nav: NavController, podcastId: String, showToast: (String) -> Unit, onTrackMenu: (Track, String?) -> Unit) {
     var data by remember { mutableStateOf<Pair<Podcast, List<Track>>?>(null) }
     LaunchedEffect(podcastId) { data = runCatching { app.catalog.getPodcast(podcastId) }.getOrNull() }
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(data?.first?.title.orEmpty(), maxLines = 1) },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text(data?.first?.title.orEmpty(), maxLines = 1) },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+            )
+        },
+    ) { pad ->
         val (pod, eps) = data ?: return@Scaffold Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = OmniTuneAccent) }
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad)) {
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     ArtworkImage(pod.artworkUrl, 190.dp, pixelSize = 500)
                     Spacer(Modifier.height(10.dp))
-                    Text(pod.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+                    Text(pod.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
                     Text(pod.author, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -756,24 +1042,28 @@ fun PodcastScreen(app: OmniTuneApplication, nav: NavController, podcastId: Strin
 fun PlaylistScreen(app: OmniTuneApplication, nav: NavController, playlistId: String, showToast: (String) -> Unit, onTrackMenu: (Track, String?) -> Unit) {
     val libState by app.library.state.collectAsState()
     val pl = remember(libState, playlistId) { app.library.playlist(playlistId) }
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(pl?.name ?: "Playlist") },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-            actions = {
-                if (pl != null) {
-                    IconButton(onClick = { app.library.deletePlaylist(pl.id); nav.popBackStack() }) { Icon(Icons.Rounded.Delete, "Delete") }
-                }
-            },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text(pl?.name ?: "Playlist") },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+                actions = {
+                    if (pl != null) {
+                        IconButton(onClick = { app.library.deletePlaylist(pl.id); nav.popBackStack() }) { Icon(Icons.Rounded.Delete, "Delete") }
+                    }
+                },
+            )
+        },
+    ) { pad ->
         if (pl == null) return@Scaffold
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad)) {
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    MosaicArtwork(pl.tracks.map { it.artworkUrl }, 200.dp, 12.dp)
+                    MosaicArtwork(pl.tracks.map { it.artworkUrl }, 200.dp, 10.dp)
                     Spacer(Modifier.height(10.dp))
-                    Text(pl.name, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+                    Text(pl.name, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
                     Text("${pl.tracks.size} songs", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (pl.tracks.isNotEmpty()) {
                         PlayShuffleBar(
@@ -794,19 +1084,29 @@ fun PlaylistScreen(app: OmniTuneApplication, nav: NavController, playlistId: Str
 @Composable
 fun MixScreen(app: OmniTuneApplication, nav: NavController, mixId: String, showToast: (String) -> Unit, onTrackMenu: (Track, String?) -> Unit) {
     val mix = app.mixesById[mixId]
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(mix?.name ?: "Mix") },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text(mix?.name ?: "Mix") },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+            )
+        },
+    ) { pad ->
         if (mix == null) return@Scaffold
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad)) {
             item {
-                PlayShuffleBar(
-                    onPlay = { app.player.play(mix.tracks, context = PlaybackContext("mix", mix.id, mix.name), shuffle = false) },
-                    onShuffle = { app.player.play(mix.tracks, context = PlaybackContext("mix", mix.id, mix.name), shuffle = true) },
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    MosaicArtwork(mix.artwork, 200.dp, 10.dp)
+                    Spacer(Modifier.height(10.dp))
+                    Text(mix.name, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
+                    Text(mix.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    PlayShuffleBar(
+                        onPlay = { app.player.play(mix.tracks, context = PlaybackContext("mix", mix.id, mix.name), shuffle = false) },
+                        onShuffle = { app.player.play(mix.tracks, context = PlaybackContext("mix", mix.id, mix.name), shuffle = true) },
+                    )
+                }
             }
             itemsIndexed(mix.tracks) { idx, t ->
                 TrackRow(app, t, onPlay = { app.player.play(mix.tracks, idx, PlaybackContext("mix", mix.id, mix.name), shuffle = false) }, onMenu = onTrackMenu, showToast = showToast)
@@ -821,12 +1121,16 @@ fun GenreScreen(app: OmniTuneApplication, nav: NavController, genreId: String, s
     val genre = findGenre(genreId)
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     LaunchedEffect(genreId) { if (genre != null) tracks = runCatching { app.catalog.getGenreTracks(genre, 40) }.getOrDefault(emptyList()) }
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(genre?.name ?: "Genre") },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text(genre?.name ?: "Genre") },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+            )
+        },
+    ) { pad ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad)) {
             if (tracks.isNotEmpty() && genre != null) {
                 item {
@@ -848,12 +1152,16 @@ fun GenreScreen(app: OmniTuneApplication, nav: NavController, genreId: String, s
 fun LikedScreen(app: OmniTuneApplication, nav: NavController, showToast: (String) -> Unit, onTrackMenu: (Track, String?) -> Unit) {
     val libState by app.library.state.collectAsState()
     val tracks = remember(libState) { app.library.likedTracks() }
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Liked Songs") },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text("Liked Songs") },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+            )
+        },
+    ) { pad ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad)) {
             if (tracks.isNotEmpty()) {
                 item {
@@ -875,12 +1183,16 @@ fun LikedScreen(app: OmniTuneApplication, nav: NavController, showToast: (String
 fun RecentScreen(app: OmniTuneApplication, nav: NavController, showToast: (String) -> Unit, onTrackMenu: (Track, String?) -> Unit) {
     val libState by app.library.state.collectAsState()
     val tracks = remember(libState) { app.library.recentlyPlayed(50) }
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Recently Played") },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text("Recently Played") },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+            )
+        },
+    ) { pad ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad)) {
             itemsIndexed(tracks) { idx, t ->
                 TrackRow(app, t, onPlay = { app.player.play(tracks, idx, PlaybackContext("recent", name = "Recently Played")) }, onMenu = onTrackMenu, showToast = showToast)
@@ -898,12 +1210,16 @@ fun SettingsScreen(app: OmniTuneApplication, nav: NavController, showToast: (Str
     val scope = rememberCoroutineScope()
     val s = remember(libState) { app.library.settings() }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Settings") },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+            )
+        },
+    ) { pad ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 Text("Account & Sync", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
@@ -941,6 +1257,7 @@ fun SettingsScreen(app: OmniTuneApplication, nav: NavController, showToast: (Str
                     Switch(
                         checked = s.shuffleMode == ShuffleMode.smart,
                         onCheckedChange = { on -> app.library.updateSettings { it.copy(shuffleMode = if (on) ShuffleMode.smart else ShuffleMode.random) } },
+                        colors = SwitchDefaults.colors(checkedTrackColor = OmniTuneAccent),
                     )
                 }
                 Text("Crossfade: ${s.crossfadeMs / 1000}s")
@@ -949,18 +1266,28 @@ fun SettingsScreen(app: OmniTuneApplication, nav: NavController, showToast: (Str
                     onValueChange = { v -> app.library.updateSettings { it.copy(crossfadeMs = v.toInt() * 1000) } },
                     valueRange = 0f..12f,
                     steps = 11,
+                    colors = SliderDefaults.colors(thumbColor = OmniTuneAccentSoft, activeTrackColor = OmniTuneAccent),
                 )
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Autoplay Radio")
-                    Switch(checked = s.autoplay, onCheckedChange = { v -> app.library.updateSettings { it.copy(autoplay = v) } })
+                    Switch(
+                        checked = s.autoplay,
+                        onCheckedChange = { v -> app.library.updateSettings { it.copy(autoplay = v) } },
+                        colors = SwitchDefaults.colors(checkedTrackColor = OmniTuneAccent),
+                    )
                 }
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Hide Explicit Content")
-                    Switch(checked = s.explicitFilter, onCheckedChange = { v -> app.library.updateSettings { it.copy(explicitFilter = v) } })
+                    Switch(
+                        checked = s.explicitFilter,
+                        onCheckedChange = { v -> app.library.updateSettings { it.copy(explicitFilter = v) } },
+                        colors = SwitchDefaults.colors(checkedTrackColor = OmniTuneAccent),
+                    )
                 }
             }
             item {
                 Text("Appearance", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AppThemeMode.entries.forEach { mode ->
                         FilterChipPill(mode.name.replaceFirstChar { it.uppercase() }, selected = s.theme == mode) {
@@ -975,7 +1302,7 @@ fun SettingsScreen(app: OmniTuneApplication, nav: NavController, showToast: (Str
             }
             item {
                 Text(
-                    "Songs stream 30-second AAC catalog previews via Media3 ExoPlayer (podcasts play full-length). Full-length song playback on Android requires a proprietary MusicKit SDK binary.",
+                    "Streaming note: Songs stream 30-second AAC catalog previews via Media3 ExoPlayer (podcasts always play full-length).",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -994,12 +1321,16 @@ fun AuthScreen(app: OmniTuneApplication, nav: NavController, showToast: (String)
     var password by remember { mutableStateOf("") }
     var err by remember { mutableStateOf<String?>(null) }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(if (register) "Create Account" else "Sign In") },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        )
-    }) { pad ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                colors = detailTopBarColors(),
+                title = { Text(if (register) "Create Account" else "Sign In") },
+                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+            )
+        },
+    ) { pad ->
         Column(modifier = Modifier.fillMaxSize().padding(pad).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (register) {
                 OutlinedTextField(value = displayName, onValueChange = { displayName = it }, label = { Text("Display name") }, modifier = Modifier.fillMaxWidth())

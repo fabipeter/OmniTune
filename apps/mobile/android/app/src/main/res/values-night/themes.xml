@@ -1,0 +1,21 @@
+<resources>
+    <style name="Theme.OmniTune" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/omnitune_midnight</item>
+        <item name="android:colorBackground">@color/omnitune_midnight</item>
+        <item name="android:statusBarColor">@color/omnitune_midnight</item>
+        <item name="android:navigationBarColor">@color/omnitune_midnight</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.OmniTune.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/omnitune_midnight</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/omnitune_midnight</item>
+        <item name="postSplashScreenTheme">@style/Theme.OmniTune</item>
+        <item name="android:windowBackground">@color/omnitune_midnight</item>
+        <item name="android:colorBackground">@color/omnitune_midnight</item>
+        <item name="android:statusBarColor">@color/omnitune_midnight</item>
+        <item name="android:navigationBarColor">@color/omnitune_midnight</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
